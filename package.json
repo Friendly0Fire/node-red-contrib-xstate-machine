@@ -18,7 +18,8 @@
     "test": "mocha \"tests/**/*_spec.js\"",
     "build": "gulp build --production",
     "devbuild": "gulp build",
-    "node-red-test": "gulp build && node --inspect node_modules/node-red/red.js --userDir ./tmp --port 1880"
+    "node-red-test": "gulp build && node --inspect node_modules/node-red/red.js --userDir ./tmp --port 1880",
+    "devlaunch": "gulp launch"
   },
   "keywords": [
     "node-red",
@@ -44,6 +45,8 @@
     "immutable": "^4.0.0-rc.14",
     "indent-string": "^4.0.0",
     "jsdom": "^19.0.0",
+    "nodemon": "^2.0.15",
+    "readdirp": "^3.6.0",
     "state-machine-cat": "9.2.2",
     "xstate": "4.30.0"
   },
@@ -57,6 +60,7 @@
     "gulp-inline-source": "^4.0.0",
     "gulp-js-escape": "^1.0.1",
     "gulp-minify-inline": "^1.1.0",
+    "gulp-nodemon": "^2.5.0",
     "gulp-rename": "^2.0.0",
     "merge-stream": "^2.0.0",
     "minimist": "^1.2.5",

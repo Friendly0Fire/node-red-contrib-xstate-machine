@@ -50,12 +50,18 @@
 		<label for="node-input-name"><i class="icon-tag"></i> Name</label>
 		<input type="text" id="node-input-name" placeholder="Name">
 	</div>
-	<div class="form-row" style="margin-bottom: 0px;">
-        <label for="node-input-xstateDefinition" style="width: 200px"><i class="fa fa-wrench"></i> XState State-machine</label>
+	<div class="form-row">
+        <label for="node-input-xstateLocation" style="width: 200px">State machine location</label>
+        <select id="node-input-xstateLocation">
+			<option value="inline">Inline</option>
+		</select>
+    </div>
+	<div class="form-row node-input-xstateDefinitionGroup" style="margin-bottom: 0px;">
+        <label for="node-input-xstateDefinition" style="width: 200px">State machine inline source</label>
         <input type="hidden" id="node-input-xstateDefinition" autofocus="autofocus">
         <input type="hidden" id="node-input-noerr">
     </div>
-    <div class="form-row node-text-editor-row" style="position:relative">
+    <div class="form-row node-text-editor-row node-input-xstateDefinitionGroup" style="position:relative">
         <div style="position: absolute; right:0; bottom:calc(100% + 3px);"><button id="node-smxstate-expand-js" class="red-ui-button red-ui-button-small"><i class="fa fa-expand"></i></button></div>
         <div style="height: 250px; min-height:150px;" class="node-text-editor" id="node-input-xstateDefinition-editor" ></div>
     </div>
@@ -64,7 +70,6 @@
 <script type="text/javascript" src="smxstate-client-util.js" inline></script>
 <script type="text/javascript" src="smxstate-client-settings.js" inline></script>
 <script type="text/javascript">
-
 	// Get the default state machine via file inclusion
 	var defaultStateMachineCode = !!!!include('../tmp/defaultStateMachine.escape.js');
 
@@ -74,6 +79,7 @@
 		defaults: {
 			name: { value: "" },
 			xstateDefinition: { value: defaultStateMachineCode },
+			xstateLocation: { value: "Inline" },
 			noerr: { value:0, required:true, validate:(v) => !v }
 		},
 		inputs:1,
@@ -83,7 +89,7 @@
 			return this.name || "smxstate";
 		},
 		inputLabels: "trigger",
-		outputLabels: ["stateChanged", "msgOutput" ], 
+		outputLabels: ["stateChanged", "msgOutput" ],
 		oneditprepare: function() {
 
 			var that = this;
@@ -132,7 +138,17 @@
 						},300);
 					}
 				})
-			})
+			});
+
+			RED.smxstate.updateListOfFiles();
+
+			$("#node-input-xstateLocation").on("change", function(e) {
+				const val = $(this).val();
+				if(val == "inline")
+					$(".node-input-xstateDefinitionGroup").show();
+				else
+					$(".node-input-xstateDefinitionGroup").hide();
+			});
 		},
 		oneditsave: function() {
 			var annot = this.editor.getSession().getAnnotations();
@@ -199,7 +215,7 @@
 				RED.sidebar.show('smxstate');
 			});
 
-			RED.events.on("nodes:add", function(node) { 
+			RED.events.on("nodes:add", function(node) {
 				if( node.hasOwnProperty("type") && node.type == "smxstate" ) {
 					// DO NOTHING!
 				}
@@ -207,7 +223,7 @@
 
 			// Select the parent container for our sidebar
 			let sidebarContainer = document.querySelector('#red-ui-sidebar-smxstate-content').parentNode.parentNode;
-			
+
 			// Setup the observer
 			uiObserver.observe(sidebarContainer, {
 				attributes:true
@@ -225,7 +241,7 @@
 					};
 				});
 
-			
+
 			// Subscribe to comms
 			this.handleStateMachineTransition = function(t,o) {
 				if( !(typeof o === "object") || !("type" in o) || typeof o.type !== "string" ) return;
@@ -257,7 +273,7 @@
 					case 'delete':
 						// Remove from sidebar
 						if( !Array.isArray(o.data) ) o.data = [o.data];
-						for( let el of o.data ) 
+						for( let el of o.data )
 							RED.smxstate.deleteStatemachineFromSidebar(el.id);
 
 						break;

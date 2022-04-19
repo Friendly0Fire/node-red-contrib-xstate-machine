@@ -2,7 +2,36 @@
 if( !RED ) {
     var RED = {}
 }
-let smxstateUtilExports = (function() {
+
+let smxstateUtilExports = (function () {
+
+    function updateListOfFilesFcn() {
+        let selector = $("#node-input-xstateLocation");
+
+        $.ajax({
+            url: "smxstate/files",
+            type:"GET",
+            success: function(resp) {
+                if( !Array.isArray(resp) ) resp = [resp];
+                for( let e of resp ) {
+                    selector.append('<option>' + e + '</option>');
+                    var it = selector.find('option').last();
+                    it.attr('value', e);
+                }
+            },
+            error: function(jqXHR,textStatus,errorThrown) {
+                if (jqXHR.status == 404) {
+                    RED.notify(RED._("node-red:common.notification.error",{message:"resource not found"}),"error");
+                } else if (jqXHR.status == 500) {
+                    RED.notify("Retrieval of files failed.","error");
+                } else if (jqXHR.status == 0) {
+                    RED.notify(RED._("node-red:common.notification.error",{message:RED._("node-red:common.notification.errors.no-response")}),"error");
+                } else {
+                    RED.notify(RED._("node-red:common.notification.error",{message:RED._("node-red:common.notification.errors.unexpected",{status:jqXHR.status,message:textStatus})}),"error");
+                }
+            }
+        });
+    }
 
     function getCurrentlySelectedNodeId() {
         let selector = $('#red-ui-sidebar-smxstate-display-selected');
@@ -60,12 +89,12 @@ let smxstateUtilExports = (function() {
 
             // Recurse into state
             function getStatepaths(state, parentState) {
-                if( typeof state === "string" ) return [(parentState ? parentState + "." + state : state)]; 
-                
+                if( typeof state === "string" ) return [(parentState ? parentState + "." + state : state)];
+
                 if( !state ) return parentState;
-                
+
                 let substates = Object.keys(state);
-                
+
                 let statePaths = [];
                 for( let substate of substates ) {
                     let substatePath = parentState ? parentState + "." + substate : substate;
@@ -82,7 +111,7 @@ let smxstateUtilExports = (function() {
             let elements = $(
                 '#red-ui-sidebar-smxstate-content svg g.graph g:not([class="edge"])'
             );
-            
+
             elements.children('*[stroke][stroke!="transparent"][stroke!="none"]').attr('stroke','#000000');
 
             // Style active states
@@ -93,7 +122,7 @@ let smxstateUtilExports = (function() {
                     .children('*[stroke][stroke!="transparent"][stroke!="none"]')
                     .attr('stroke','#FF0000');
             }
-            
+
             //updateContextFcn(data.state.context);
 
             setTimeout(() => {
@@ -132,7 +161,7 @@ let smxstateUtilExports = (function() {
         } else {
             viewBox = { x: currentViewBoxCfg[0], y: currentViewBoxCfg[1], w: currentViewBoxCfg[2], h: currentViewBoxCfg[3] };
         }
-        
+
         var isPanning = false;
         var startPoint = { x: 0, y: 0 };
         var endPoint = { x: 0, y: 0 };;
@@ -144,7 +173,7 @@ let smxstateUtilExports = (function() {
             const svgSize = { w: svgElement.clientWidth, h: svgElement.clientHeight };
             var w = viewBox.w;
             var h = viewBox.h;
-            var mx = e.offsetX;//mouse x  
+            var mx = e.offsetX;//mouse x
             var my = e.offsetY;
             var dw = w * -Math.sign(e.deltaY) * 0.05;
             var dh = h * -Math.sign(e.deltaY) * 0.05;
@@ -190,10 +219,10 @@ let smxstateUtilExports = (function() {
 
     function displayFcn(forceRedraw = false) {
         idObj = getCurrentlySelectedNodeId();
-        
+
         // Clear graphics and get a new one
         $('#red-ui-sidebar-smxstate-graph').empty();
-        
+
         // Show spinner
         $('#red-ui-sidebar-smxstate-graph').before(
             $('<div id="red-ui-sidebar-smxstate-spinner">').append(
@@ -211,12 +240,12 @@ let smxstateUtilExports = (function() {
             success: function(resp) {
                 $('#red-ui-sidebar-smxstate-spinner').remove();
                 RED.notify(`Successfully rendered state-graph for ${idObj.label}`,{type:"success",id:"smxstate"});
-                
+
                 $('#red-ui-sidebar-smxstate-graph').replaceWith($(resp).attr("id", "red-ui-sidebar-smxstate-graph"));
-                
-                setupZoom( 
+
+                setupZoom(
                     $('#red-ui-sidebar-smxstate-content')[0],
-                    $('#red-ui-sidebar-smxstate-graph')[0] 
+                    $('#red-ui-sidebar-smxstate-graph')[0]
                 );
             },
             error: function(jqXHR,textStatus,errorThrown) {
@@ -230,7 +259,7 @@ let smxstateUtilExports = (function() {
                 } else {
                     RED.notify(RED._("node-red:common.notification.error",{message:RED._("node-red:common.notification.errors.unexpected",{status:jqXHR.status,message:textStatus})}),"error");
                 }
-            }    
+            }
         });
     }
 
@@ -257,7 +286,7 @@ let smxstateUtilExports = (function() {
                 } else {
                     RED.notify(RED._("node-red:common.notification.error",{message:RED._("node-red:common.notification.errors.unexpected",{status:jqXHR.status,message:textStatus})}),"error");
                 }
-            }    
+            }
         });
     }
 
@@ -341,11 +370,11 @@ let smxstateUtilExports = (function() {
                         .append(
                             $('<input type="text" id="red-ui-sidebar-smxstate-settings-renderTimeoutMs">')
                                 .css("width", "40px")
-                                .change( (ev) => { 
+                                .change( (ev) => {
                                     try {
                                         let number = Number.parseInt(ev.target.value);
                                         if( Number.isNaN(number) || number <= 0 ) throw("Render timeout must be a strictly positive integer.")
-                                        RED.smxstate.settings.set('renderTimeoutMs', number); 
+                                        RED.smxstate.settings.set('renderTimeoutMs', number);
                                     } catch(err) {
                                         RED.notify(err,"error");
                                         // Reset
@@ -357,7 +386,7 @@ let smxstateUtilExports = (function() {
                         )
                     )
             );
-        
+
         RED.popover.tooltip(toolbar.find('#red-ui-sidebar-smxstate-reset'),"Reset to initial state");
         RED.popover.tooltip(toolbar.find('#red-ui-sidebar-smxstate-revealRoot'),"Reveal instance in flow");
         RED.popover.tooltip(toolbar.find('#red-ui-sidebar-smxstate-reveal'),"Reveal prototype in flow");
@@ -366,7 +395,7 @@ let smxstateUtilExports = (function() {
             .append(
                 $('<div id="red-ui-sidebar-smxstate-context-header">').text("Context data:")
             ).append('<span id="red-ui-sidebar-smxstate-context-data" class="red-ui-debug-msg-payload">');
-            
+
         let smxdisplayhelp = $('<div>').css({ fontSize: "x-small", padding: "8px" }).append('<span><b>Pan:</b> Click+drag / <b>Zoom:</b> Mousewheel</span>');
         let smxdisplay = $('<div id="red-ui-sidebar-smxstate-content">').append('<svg id="red-ui-sidebar-smxstate-graph">');
 
@@ -374,7 +403,7 @@ let smxstateUtilExports = (function() {
         smxcontext.appendTo(content);
         smxdisplayhelp.appendTo(content);
         smxdisplay.appendTo(content);
-        
+
 
         // Populate list
         var that = this;
@@ -390,19 +419,19 @@ let smxstateUtilExports = (function() {
 
     function refreshFcn() {
         let nodes = RED.nodes.filterNodes({type: "smxstate"});
-        
-        // The RED.nodes.filterNodes function returns all nodes (including 
+
+        // The RED.nodes.filterNodes function returns all nodes (including
         // deactivated ones) except of instances within subflows. Actually
-        // only a prototype-node within each subflow prototype is returned 
+        // only a prototype-node within each subflow prototype is returned
         // (no instances!).
-        // 
+        //
         // The property
         //     node.d
         // is true for deactivated nodes and the function
         //     RED.workspaces.contains( node.z )
         // returns false for prototype nodes within subflows
-        // 
-        // Because the node-red interface is lacking needed functionality we 
+        //
+        // Because the node-red interface is lacking needed functionality we
         // instead request the data from the server every time.
 
         // Clear list
@@ -429,16 +458,16 @@ let smxstateUtilExports = (function() {
                 } else {
                     RED.notify(RED._("node-red:common.notification.error",{message:RED._("node-red:common.notification.errors.unexpected",{status:jqXHR.status,message:textStatus})}),"error");
                 }
-            }    
+            }
         });
 
         // Get available renderers from server
         RED.smxstate.settings.get("availableRenderers", (resp) => {
-            
+
             let selectElement = $('#red-ui-sidebar-smxstate-settings-renderer');
 
             if( resp ) {
-                
+
                 if( !Array.isArray(resp) ) resp = [resp];
                 for( let e of resp ) {
                     selectElement.append(
@@ -509,7 +538,8 @@ let smxstateUtilExports = (function() {
         updateContext: updateContextFcn,
         revealRoot: revealRootFcn,
         reveal: revealFcn,
-        updateSettings: updateSettingsFcn
+        updateSettings: updateSettingsFcn,
+        updateListOfFiles: updateListOfFilesFcn
     };
 })();
 

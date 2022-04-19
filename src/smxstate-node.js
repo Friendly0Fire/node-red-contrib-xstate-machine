@@ -6,6 +6,8 @@ module.exports = function (RED) {
 	var smcat     = require('../src/smcat-render');
 	var immutable = require('immutable');
 	xstate.smcat  = require('../src/xstate-smcat');
+	const readdirp = require('readdirp');
+	const path = require('path');
 	RED.smxstate  = {};
 	RED.smxstate.settings = require('../src/smxstate-settings');
 
@@ -20,7 +22,7 @@ module.exports = function (RED) {
             msgArr = [msgArr];
         }
 		var msgCount = 0;
-		
+
 		// We only have one msg output (2nd output), ignore all the others
 		if (!util.isArray(msgArr[0])) {
 			msgArr[0] = [msgArr[0]];
@@ -49,7 +51,7 @@ module.exports = function (RED) {
 				}
 			}
 		}
-        
+
         if (msgCount>0) {
 			// Send to 2nd output
             sendFcn.call(node,[null, ...msgArr]);
@@ -247,7 +249,7 @@ result = (function(__send__,__done__){
 		if( !node ) return;
 
 		let context = node.context();
-		
+
 		if( !context || !context.xstate || !context.xstate.blueprint ) return;
 
 		let service = context.xstate.service;
@@ -299,7 +301,7 @@ result = (function(__send__,__done__){
 				topic: "state",
 				payload: payload
 			}]]);
-			
+
 			// Publish to editor
 			// Runtime only sends data if there are client connections/subscriptions
 			if( activeId == node.id ) {
@@ -319,7 +321,7 @@ result = (function(__send__,__done__){
 				topic: "context",
 				payload: context
 			}]]);
-			
+
 			// Publish to editor
 			// Runtime only sends data if there are client connections/subscriptions
 			if( activeId == node.id ) {
@@ -361,7 +363,7 @@ result = (function(__send__,__done__){
 			f = f.parent;
 		}
 		path.unshift(f.flow.label)
-		
+
 		return {
 			rootId: id,
 			flowId: f.id,
@@ -391,12 +393,12 @@ result = (function(__send__,__done__){
 
 		// array of active timers
 		this.outstandingIntervals = [];
-		this.outstandingTimers    = []; 
+		this.outstandingTimers    = [];
 
 		// init the node status
 		node.status({fill: 'red', shape: 'ring', text: 'invalid setup'});
 		node.config = config;
-		
+
 		// Send new node info to the UI
 		RED.comms.publish('smxstate', { type: 'add', data: nodeinfo });
 
@@ -412,7 +414,7 @@ result = (function(__send__,__done__){
 			});
 
 			this.initscript.runInContext(vmcontext);
-			
+
 			let smobj, smcfg, smlisteners;
 
 			if( vmcontext.result.hasOwnProperty('machine') ) {
@@ -433,7 +435,7 @@ result = (function(__send__,__done__){
 
 			smobj.id = smobj.id.replace(/[^a-zA-Z0-9\.\s\n\r]/gi,'');
 
-			nodeContext.xstate = { 
+			nodeContext.xstate = {
 				blueprint: immutable.fromJS(smobj),
 				machineConfig: smcfg,
 				listeners: smlisteners,
@@ -468,7 +470,7 @@ result = (function(__send__,__done__){
 
 		node.on('close', function (removed, done) {
 			// Removing a node within a subflow or removing a subflow containing this node does not set removed to true!
-			RED.comms.publish('smxstate', { 
+			RED.comms.publish('smxstate', {
 					type: 'delete',
 					removed: removed,
 					data: registeredNodeIDs.filter(e => e.id === this.id )
@@ -514,6 +516,14 @@ result = (function(__send__,__done__){
 					res.sendStatus(500);
 					console.error(`smxstate: GET Command failed: ${err.toString()}`);
 				}
+				break;
+			case 'files':
+				let files = [];
+				readdirp(path.join(RED.settings.userDir, "fsm"), { fileFilter: '*.js' })
+					.on('data', (entry) => {
+						files.push(entry.path);
+					})
+					.on('end', () => res.status(200).send(files));
 				break;
 			default:
 				res.sendStatus(404);
@@ -561,7 +571,7 @@ result = (function(__send__,__done__){
 									logOutput: true,
 									forceRedraw: req.body.hasOwnProperty("forceRedraw") ? req.body.forceRedraw === "true" : false
 								});
-							
+
 								let smcat_svg;
 
 								if( !!output && output.code === 0 ) {
@@ -572,7 +582,7 @@ result = (function(__send__,__done__){
 										node.error(`Rendering of state machine failed: Render process returned error code ${output.code}: ${output.err}`);
 									else
 										node.error(`Rendering of state machine failed: Render process timed out.`);
-									
+
 									return;
 								}
 
@@ -605,7 +615,7 @@ result = (function(__send__,__done__){
 									node.error(`Rendering of state machine failed: Render process returned error: ${err}`);
 							}
 						})();
-						
+
 						// Save the last provied graph ID
 						activeId = req.params.id;
 						//res.sendStatus(200);
@@ -628,7 +638,7 @@ result = (function(__send__,__done__){
 					node.error(`Invalid method: ${req.params.method}`);
 					break;
 			}
-			
+
 		} else {
 			console.error(`smxstate: node with id ${req.params.id} does not exist for method ${req.params.method}.`)
 			res.sendStatus(404);

@@ -1,16 +1,17 @@
 const gulp = require('gulp');
 const path = require('path');
-const del  = require('del');
+const del = require('del');
 const argv = require('minimist')(process.argv.slice(2));
 
 const mergeStream = require('merge-stream');
-var inlinesource  = require('gulp-inline-source');
-var escape        = require('gulp-html-escape');
+var inlinesource = require('gulp-inline-source');
+var escape = require('gulp-html-escape');
 const fileinclude = require('gulp-file-include');
-var rename        = require('gulp-rename');
-var jsEscape      = require('gulp-js-escape');
-const chmod       = require('gulp-chmod');
-const minifyInl   = require('gulp-minify-inline');
+var rename = require('gulp-rename');
+var jsEscape = require('gulp-js-escape');
+const chmod = require('gulp-chmod');
+const minifyInl = require('gulp-minify-inline');
+const nodemon = require('gulp-nodemon');
 
 // Gulp configuration
 const cfg = {
@@ -36,33 +37,33 @@ gulp.task('copy', function () {
 
 gulp.task('build:jsescape', function () {
 	return gulp.src(cfg.jsescape)
-	.pipe(jsEscape())
-	.pipe(rename( (path) => {
-		path.extname = ".escape.js"
-	}))
-	.pipe(gulp.dest(cfg.tmp));
+		.pipe(jsEscape())
+		.pipe(rename((path) => {
+			path.extname = ".escape.js"
+		}))
+		.pipe(gulp.dest(cfg.tmp));
 });
 
 gulp.task('build:html', function () {
 	let stream = gulp.src(cfg.nodeHtml)
-	.pipe(inlinesource({compress: cfg.production, pretty: !cfg.production}))
-	.pipe(fileinclude({ prefix: '!!!!', basepath: '@file'}));
+		.pipe(inlinesource({ compress: cfg.production, pretty: !cfg.production }))
+		.pipe(fileinclude({ prefix: '!!!!', basepath: '@file' }));
 
-	if( cfg.production )
+	if (cfg.production)
 		stream.pipe(minifyInl());
 
 	return stream.pipe(chmod(0o555))
-	.pipe(gulp.dest(cfg.build));
+		.pipe(gulp.dest(cfg.build));
 });
 
-gulp.task('build:testhtml', function(cb) {
-	if( cfg.production ) { console.log("Production build - doing nothing."); cb(); return; };
+gulp.task('build:testhtml', function (cb) {
+	if (cfg.production) { console.log("Production build - doing nothing."); cb(); return; };
 	return gulp.src(cfg.testHtml)
-	.pipe(fileinclude({ prefix: '!!!!', basepath: '@file'}))
-	.pipe(gulp.dest(cfg.tmp));
+		.pipe(fileinclude({ prefix: '!!!!', basepath: '@file' }))
+		.pipe(gulp.dest(cfg.tmp));
 })
 
-gulp.task('clean', function(cb) {
+gulp.task('clean', function (cb) {
 	return del('./dist/*.*', {
 		"force": true
 	}, cb);
@@ -70,3 +71,15 @@ gulp.task('clean', function(cb) {
 
 gulp.task('build', gulp.series('clean', 'copy', 'build:jsescape', 'build:html', 'build:testhtml'));
 
+gulp.task('launch', function (done) {
+	nodemon({
+		  script: './node_modules/node-red/red.js'
+		, verbose: true
+		, args: ["--userDir", "./tmp", "--port", "1880"]
+		, ext: 'js html'
+		, env: { 'NODE_ENV': 'development' }
+		, done: done
+		, tasks: ['build']
+		, watch: ['src']
+	})
+})
